@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renda Güner Efektleri Uygulamalı Örnek</title>
+    <style>
+        /* GENEL SAYFA TASARIMI */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #111;
+            color: #fff;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            margin-bottom: 30px;
+            font-weight: 400;
+            letter-spacing: 1px;
+        }
+
+        /* 1. OYUNCU KARTLARI VE KUTU İÇİNDE BÜYÜME (HOVER EFFECT) */
+        .galeri-konteyner {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .oyuncu-karti {
+            position: relative;
+            background-color: #222;
+            border-radius: 8px;
+            overflow: hidden; /* Görselin kutu dışına taşmasını engeller (Kritik!) */
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .gorsel-kutusu {
+            width: 100%;
+            height: 350px;
+            overflow: hidden;
+            background-color: #1a1a1a; /* Resim yüklenene kadar duracak arka plan */
+        }
+
+        .oyuncu-karti img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* 0.4 saniyede yumuşakça büyüme geçişi sağlar */
+            transition: transform 0.4s ease; 
+        }
+
+        /* Fare üzerine geldiğinde görseli %10 büyüt (Scale) */
+        .oyuncu-karti:hover img {
+            transform: scale(1.1);
+        }
+
+        .oyuncu-bilgi {
+            padding: 15px;
+            text-align: center;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        .oyuncu-bilgi h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        /* 2. MODERN LIGHTBOX (TIKLANDIĞINDA EKRANI KAPLAMA) */
+        .lightbox-pencere {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.92);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Lightbox aktif olduğunda görünür yap */
+        .lightbox-pencere.aktif {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .lightbox-gorsel {
+            max-width: 85%;
+            max-height: 85vh;
+            border-radius: 4px;
+            box-shadow: 0 0 25px rgba(255,255,255,0.1);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .lightbox-pencere.aktif .lightbox-gorsel {
+            transform: scale(1);
+        }
+
+        .kapat-butonu {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: #fff;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .kapat-butonu:hover {
+            color: #ff3333;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Oyuncu Portföyü Efekt Uygulaması</h2>
+
+    <div class="galeri-konteyner">
+        <!-- 3. LAZY LOADING (Gecikmeli Yükleme): loading="lazy" niteliği kullanılmıştır -->
+        <!-- Resimler placeholder (örnek görsel) servisinden çekilmektedir -->
+        <div class="oyuncu-karti">
+            <div class="gorsel-kutusu">
+                <img src="https://picsum.photos" loading="lazy" alt="Oyuncu 1">
+            </div>
+            <div class="oyuncu-bilgi">
+                <h3>Ahmet Yılmaz</h3>
+            </div>
+        </div>
+
+        <div class="oyuncu-karti">
+            <div class="gorsel-kutusu">
+                <img src="https://picsum.photos" loading="lazy" alt="Oyuncu 2">
+            </div>
+            <div class="oyuncu-bilgi">
+                <h3>Zeynep Kaya</h3>
+            </div>
+        </div>
+
+        <div class="oyuncu-karti">
+            <div class="gorsel-kutusu">
+                <img src="https://picsum.photos" loading="lazy" alt="Oyuncu 3">
+            </div>
+            <div class="oyuncu-bilgi">
+                <h3>Can Demir</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX HTML ALTYAPISI -->
+    <div class="lightbox-pencere" id="lightbox">
+        <span class="kapat-butonu" id="kapat">&times;</span>
+        <img class="lightbox-gorsel" id="lightboxImg" src="" alt="Büyük Görsel">
+    </div>
+
+    <!-- JAVASCRIPT: TIKLAMA VE BÜYÜTME ETKİLEŞİMİ -->
+    <script>
+        const kartlar = document.querySelectorAll('.oyuncu-karti');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const kapatBtn = document.getElementById('kapat');
+
+        // Her bir karta tıklama olayı ekle
+        kartlar.forEach(kart => {
+            kart.addEventListener('click', () => {
+                // Kartın içindeki resmin kaynak (src) adresini al
+                const orijinalResimYolu = kart.querySelector('img').src;
+                
+                // Lightbox içindeki boş resme bu adresi ata
+                lightboxImg.src = orijinalResimYolu;
+                
+                // Lightbox'ı görünür yap (aktif sınıfını ekle)
+                lightbox.classList.add('aktif');
+            });
+        });
+
+        // Kapatma butonuna basınca pencereyi gizle
+        kapatBtn.addEventListener('click', kapatLightbox);
+
+        // Ekranın boş bir yerine (resim dışına) tıklayınca da kapansın
+        lightbox.addEventListener('click', (e) => {
+            if (e.target !== lightboxImg) {
+                kapatLightbox();
+            }
+        });
+
+        function kapatLightbox() {
+            lightbox.classList.remove('aktif');
+            // Animasyon bittikten sonra resmi sıfırla ki bir sonraki açılışta eski resim anlık görünmesin
+            setTimeout(() => { lightboxImg.src = ''; }, 300);
+        }
+    </script>
+
+</body>
+</html>
+
